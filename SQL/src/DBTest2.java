@@ -13,34 +13,39 @@ public class DBTest2
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        String dbacct, passwrd, dbname, ssn, lname;
-        Double salary;
+        String dbacct, passwrd, dbname, ssn, lname, Fname;
+        String salary,select,where,from;
 
-        System.out.println("Enter database account:");
-        dbacct=scanner.nextLine();
-        System.out.println("Enter password:");
-        passwrd=scanner.nextLine();
-        System.out.println("Enter database name:");
-        dbname=scanner.nextLine();
+        //System.out.println("Enter database account:");
+        dbacct="root";
+        //System.out.println("Enter password:");
+        passwrd="dlfgns12";
+        //System.out.println("Enter database name:");
+        dbname="mydb";
 
         String url="jdbc:mysql://localhost:3306/"+dbname+"?serverTimezone=UTC";
         conn=DriverManager.getConnection(url, dbacct, passwrd);
-
-        String stmt1="select Lname, Salary from EMPLOYEE where Ssn=?";
+        
+        select = "* ";
+        from = "employee";
+        where = "123456789";
+        
+        String stmt1="select "+ select + "from "+ from  +" where "+"ssn ="+"?";
         PreparedStatement p=conn.prepareStatement(stmt1);
-
-        System.out.println("Enter a Social Security Number: ");
-        ssn=scanner.nextLine();
-
+        System.out.println(p);
+        
+        //System.out.println("Enter a Social Security Number: ");
         //Statement의 첫번째 ?에 넣는다.
         p.clearParameters();
-        p.setString(1, ssn);
+        System.out.println(p);
+        p.setNString(1, where);
+        System.out.println(p);
         ResultSet r=p.executeQuery();
+        System.out.println(r);
 
         while(r.next()){
-            lname=r.getString(1);
-            salary=r.getDouble(2);
-            System.out.println(lname+" "+salary);
+            lname=r.getString(1) + " " +r.getString(3)+ " " +r.getString(4);
+            System.out.println(lname);
         }
 
         try {
