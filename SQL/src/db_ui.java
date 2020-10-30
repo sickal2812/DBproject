@@ -19,11 +19,13 @@ public class db_ui {
 	static String select_msg2 = "";
 	static int count_select = 0;
 	static String db_result = "";
+	static String state_msg = "";
 	
 	static String pwd = "dlfgns12"; // 이부분만 바꿔주세요
 	
 	public static void DB_Access() throws SQLException, IOException {
 		Connection conn = null;
+		state_msg = "";
 		db_result = "";
         // 연결
         try {
@@ -69,10 +71,22 @@ public class db_ui {
         ResultSet r=p.executeQuery();
         //System.out.println(r);
         
+        // select 에 super_ssn 이나 Dno이 들어가있으면
+        // if문 처리해서 super_ssn -> select e.name from employee e, employee f where f.super_ssn = e.ssn
+        // select f.ssn ,e.Fname, e.Minit, e.Lname from employee e, employee f where f.Super_ssn = e.Ssn;
+        // 
+        // dno만 들어간 경우
+        // select /select/ ,Dname from department,employee where Dnumber = Dno;
+        //
+        // dno, super_ssn 둘다 들어간 경우
+        // select f.Fname, f.Minit, f.Lname, f.ssn ,e.Fname, e.Minit, e.Lname, Dname  from employee e, employee f, department where f.Super_ssn = e.Ssn and f.Dno=Dnumber;
+        
+        // update employee set Salary = "value" where ssn = 'target_ssn';
+        
         while(r.next()){
         	String result = "";
         	for(int i=0; i<count_select+1; i++)
-        		result += r.getString(i+1) + " ";
+        		result += r.getString(i+1) + "  ";
         		db_result += result+"\n";
 			//System.out.println(result);
         }
@@ -132,7 +146,7 @@ public class db_ui {
             this.add(summit_button);
             // 기본적인 check box 넣기, 검색버튼
             
-            
+            JPanel panel = new JPanel();
             
             
             String[] header = new String[0];
@@ -140,17 +154,24 @@ public class db_ui {
             DefaultTableModel model = new DefaultTableModel(contents,header);
             JTable table =  new JTable(model);
             JScrollPane jscp1 = new JScrollPane(table);
-            jscp1.setPreferredSize (new Dimension(800,400));
-            this.add(jscp1);
+            jscp1.setPreferredSize (new Dimension(1380,400));
+            panel.add(jscp1);
             
             JButton choose_button = new JButton("선택");
-            this.add(choose_button);
+            panel.add(choose_button,BorderLayout.SOUTH); // 왜 아래쪽에 안나오는지..?
+
+            this.add(panel,BorderLayout.CENTER);
+
+            JTextArea txt  = new JTextArea(10,80);
+            this.add(txt);
             
             ActionListener summit_listener = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					// TODO Auto-generated method stub
 					System.out.println("검색 ");
+					state_msg = "";
+					state_msg += "검색" + "\n";
 					msg =" ";
 					select_msg = "";
 					select_msg2 = "";
@@ -189,6 +210,8 @@ public class db_ui {
 					select_msg2 += combo2.getSelectedItem().toString();
 					if(select_msg.equals("전체")) {
 						select_msg2 = "";
+					} else if(select_msg.equals("부서별")) {
+						select_msg = "";
 					}
 					msg= msg.replace(" ", ",");	
 					msg = msg.substring(0, msg.length() - 1);
@@ -196,8 +219,10 @@ public class db_ui {
 						msg = msg.substring(1, msg.length());
 					}
 					System.out.println("select -" + msg);
+					state_msg += "select -" + msg +"\n";
 					System.out.println("from -" + " " + select_msg + select_msg2);
-					
+					state_msg += "from -" + " " + select_msg + select_msg2 + "\n";
+					txt.setText(state_msg);
 					
 					try {
 						DB_Access();
@@ -212,11 +237,8 @@ public class db_ui {
 						}
 						String[][] array3 = new String[array2.length][];
 						for(int i=0; i<array2.length; i++) {
-							array3[i] = array2[i].split(" ");
+							array3[i] = array2[i].split("  ");
 						}
-						
-						// #### 전처리 된 데이터의 주소값이 붙여줬으면 하는데... ####ㅓㅓ
-						
 						//array는 전처리리된 헤더
 						//array3 는 전처리된 데이터
 						
@@ -234,9 +256,6 @@ public class db_ui {
             };
             
             
-            
-            // 검색 버튼에 리스너를 달아서 검색하게 되면 select 한 부분과 from 한 부분을 가져옵니다.
-            // 실제로는 db와 연동해서 저 msg를 배열화 시켜서 select 배열 from 배열 같이 사용하면 될 것 같네요
             ActionListener combo1_listener = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -250,7 +269,7 @@ public class db_ui {
             };
             summit_button.addActionListener(summit_listener);
             combo1.addActionListener(combo1_listener);
-            setSize(880, 600);
+            setSize(1500, 800);
             setVisible(true);
         }
     }
