@@ -20,10 +20,10 @@ public class db_ui {
 	static int count_select = 0;
 	static String db_result = "";
 	static String state_msg = "";
-	
+	static int lock = 1;
 	static String pwd = "dlfgns12"; // 이부분만 바꿔주세요
 	
-	public static void DB_Access() throws SQLException, IOException {
+	public static String DB_Access() throws SQLException, IOException {
 		Connection conn = null;
 		state_msg = "";
 		db_result = "";
@@ -44,6 +44,23 @@ public class db_ui {
             e.printStackTrace();
         }
         
+        if(lock == 0) {
+        	String stmt1="select Dname from department";
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.clearParameters();
+        	ResultSet r=p.executeQuery();
+        	//System.out.println(r.getString(1));
+        	while(r.next()){
+            	String result = "";
+            	for(int i=0; i<count_select+1; i++) 
+            	result += r.getString(i+1) + " ";
+            	db_result += result;
+            	//System.out.println(result);
+            }
+        	//System.out.println(db_result);
+        	return db_result;
+        }
+        
         String select = msg + " ";
         String from = "employee";
         //String where = "123456789";
@@ -62,8 +79,6 @@ public class db_ui {
         //Statement의 첫번째 ?에 넣는다.
         p.clearParameters();
         //System.out.println(p);
-        
-        
 
         //p.setNString(1, where);
         //System.out.println(p);
@@ -85,10 +100,10 @@ public class db_ui {
         
         while(r.next()){
         	String result = "";
-        	for(int i=0; i<count_select+1; i++)
-        		result += r.getString(i+1) + "  ";
-        		db_result += result+"\n";
-			//System.out.println(result);
+        	for(int i=0; i<count_select+1; i++) 
+        	result += r.getString(i+1) + "  ";
+        	db_result += result+"\n";
+        	//System.out.println(result);
         }
         
         // 해제
@@ -99,7 +114,7 @@ public class db_ui {
             e.printStackTrace();
         }
         // db 연결해서 select하는거 어떻게?
-
+		return stmt1;
 	}
 	
     static class setGUI extends JFrame{
@@ -111,8 +126,14 @@ public class db_ui {
             this.setLayout(new FlowLayout());
             
             String total_depart[] = {"전체", "부서별"};
-            String depart[] = {"전체", "research"};
             // deptart에 select DEPARTMENT from department
+            lock = 0;
+            String department_list = DB_Access();
+            lock = 1;
+            
+            department_list = "전체 " + department_list;
+            //System.out.println(department_list);
+            String depart[] = department_list.split(" ");
             
             JComboBox<String> combo1 = new JComboBox<String>(total_depart);
             add( combo1, BorderLayout.NORTH);
