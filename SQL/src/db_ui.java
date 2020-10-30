@@ -4,8 +4,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemListener;
 import java.io.IOException;
+import javax.swing.*;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
-import javax.swing.*; 
 import java.sql.*;
 
 
@@ -20,14 +24,13 @@ public class db_ui {
 	
 	public static void DB_Access() throws SQLException, IOException {
 		Connection conn = null;
+		db_result = "";
         // 연결
         try {
             Class.forName("com.mysql.cj.jdbc.Driver"); //JDBC 드라이버 연결
-
             // 접속 url과 사용자, 비밀번호
             String url="jdbc:mysql://localhost:3306/mydb?serverTimezone=UTC";
             String user="root";
-
             conn = DriverManager.getConnection(url, user, pwd);
             System.out.println("정상적으로 연결되었습니다.");
 
@@ -42,7 +45,7 @@ public class db_ui {
         String select = msg + " ";
         String from = "employee";
         //String where = "123456789";
-        
+        // 조건추가...
         
         int fromIndex = -1;
         while ((fromIndex = select.indexOf(",", fromIndex + 1)) >= 0) {
@@ -51,35 +54,27 @@ public class db_ui {
         
         String stmt1="select "+ select + "from "+ from;  //+" where "+"ssn ="+"?";
         PreparedStatement p=conn.prepareStatement(stmt1);
-        System.out.println(p);
+        //System.out.println(p);
         
         //System.out.println("Enter a Social Security Number: ");
         //Statement의 첫번째 ?에 넣는다.
         p.clearParameters();
         //System.out.println(p);
         
+        
 
         //p.setNString(1, where);
+        //System.out.println(p);
         
-        
-        System.out.println(p);
         ResultSet r=p.executeQuery();
         //System.out.println(r);
-        
-        DatabaseMetaData metaData = conn.getMetaData();
-        String[] types = {"TABLE"};
-        //Retrieving the columns in the database
-        ResultSet tables = metaData.getTables(null, "mydb", "%", types);
-        while (tables.next()) {
-           //System.out.println(tables.getString("TABLE_NAME"));
-        }
         
         while(r.next()){
         	String result = "";
         	for(int i=0; i<count_select+1; i++)
         		result += r.getString(i+1) + " ";
         		db_result += result+"\n";
-			System.out.println(result);
+			//System.out.println(result);
         }
         
         // 해제
@@ -103,6 +98,7 @@ public class db_ui {
             
             String total_depart[] = {"전체", "부서별"};
             String depart[] = {"전체", "research"};
+            // deptart에 select DEPARTMENT from department
             
             JComboBox<String> combo1 = new JComboBox<String>(total_depart);
             add( combo1, BorderLayout.NORTH);
@@ -136,9 +132,19 @@ public class db_ui {
             this.add(summit_button);
             // 기본적인 check box 넣기, 검색버튼
             
-            TextArea textbox = new TextArea("");
-            textbox.setSize(800, 300);
-            this.add(textbox, BorderLayout.CENTER);
+            
+            
+            
+            String[] header = new String[0];
+            String [][] contents = new String[0][];
+            DefaultTableModel model = new DefaultTableModel(contents,header);
+            JTable table =  new JTable(model);
+            JScrollPane jscp1 = new JScrollPane(table);
+            jscp1.setPreferredSize (new Dimension(800,400));
+            this.add(jscp1);
+            
+            JButton choose_button = new JButton("선택");
+            this.add(choose_button);
             
             ActionListener summit_listener = new ActionListener() {
 				@Override
@@ -190,11 +196,36 @@ public class db_ui {
 						msg = msg.substring(1, msg.length());
 					}
 					System.out.println("select -" + msg);
-					System.out.println("from -" + select_msg + select_msg2);
+					System.out.println("from -" + " " + select_msg + select_msg2);
+					
+					
 					try {
 						DB_Access();
+						//System.out.println(msg);
 						//System.out.println(db_result);
-						textbox.append(db_result);
+						//textbox.append(msg+"\n");
+						//textbox.append(db_result);
+						String array[] = msg.split(",");
+						String array2[] = db_result.split("\n");
+						for(int i=0; i<array2.length; i++) {
+							System.out.println(array2[i]);
+						}
+						String[][] array3 = new String[array2.length][];
+						for(int i=0; i<array2.length; i++) {
+							array3[i] = array2[i].split(" ");
+						}
+						
+						// #### 전처리 된 데이터의 주소값이 붙여줬으면 하는데... ####ㅓㅓ
+						
+						//array는 전처리리된 헤더
+						//array3 는 전처리된 데이터
+						
+						table.setModel(new DefaultTableModel(array3,array));
+						
+						// Jtable에 체크박스 달기... 
+						// ex.. https://i.stack.imgur.com/SmVEG.jpg
+
+						table.repaint();
 					} catch (SQLException | IOException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -219,8 +250,7 @@ public class db_ui {
             };
             summit_button.addActionListener(summit_listener);
             combo1.addActionListener(combo1_listener);
-
-            setSize(1400, 700);
+            setSize(880, 600);
             setVisible(true);
         }
     }
