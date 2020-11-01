@@ -9,8 +9,12 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
 
 import java.sql.*;
+
+
 
 
 public class db_ui {
@@ -24,7 +28,12 @@ public class db_ui {
 	static int lock = 1;
 	static String pwd = "dlfgns12"; // 이부분만 바꿔주세요
 	static String select_depart = "";
+	static String table_header = "";
+	static String table_contents = "";
+	static String show_table_msg = "";
+	static String choose_button_get = "";
 	
+
 	public static String DB_Access() throws SQLException, IOException {
 		Connection conn = null;
 		state_msg = "";
@@ -45,6 +54,7 @@ public class db_ui {
             System.err.println("드라이버를 로드할 수 없습니다.");
             e.printStackTrace();
         }
+        
         // lock이 0이면 이것을 실행
         // db에 select Dname from department 실행하여 Dname들을 가져옴
         if(lock == 0) {
@@ -61,8 +71,53 @@ public class db_ui {
             	//System.out.println(result);
             }
         	//System.out.println(db_result);
+        	
+        	Statement stmt = conn.createStatement();
+            //Retrieving the data
+            ResultSet rs = stmt.executeQuery("Show tables");
+            while(rs.next()) {
+            	show_table_msg += rs.getString(1) + " ";
+            }   	
         	return db_result;
         }
+        
+        if(lock == 2) {
+        	String stmt1="select * from " + choose_button_get;
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.clearParameters();
+        	ResultSet r=p.executeQuery();
+        	
+        	String[] columnNames = null;
+            ResultSetMetaData rsmd = r.getMetaData();
+            int columnCount = rsmd.getColumnCount(); 
+            columnNames = new String[columnCount]; 
+            for(int i=1; i<=columnCount; i++) {
+                // Put column name into array
+                columnNames[i-1] = rsmd.getColumnName(i); 
+            }
+            for(int i=1; i<=columnCount; i++) {
+                // Put column name into array
+                columnNames[i-1] = rsmd.getColumnName(i); 
+                //System.out.println(columnNames[i-1]);
+                table_header += rsmd.getColumnName(i) + " "; 
+            }
+            
+            //System.out.println(table_header);
+
+            r=p.executeQuery();
+            while(r.next()){
+            	String result = "";
+            	for(int i=0; i<columnCount; i++) {
+            		//System.out.println(r.getString(i+1));
+            		result += r.getString(i+1) + "  ";
+            	}
+            	table_contents += result + "\n";
+            	//System.out.println(result);
+            }
+            //System.out.println(table_contents);
+        	return "";
+        }
+        
         
         String select = msg + " ";
         String from = "employee";
@@ -115,7 +170,7 @@ public class db_ui {
         	stmt1 = "SELECT "+select+" ,CONCAT_WS(' ', e.Fname, e.Minit, e.Lname), Dname from employee e,employee f, department where e.Ssn = f.super_ssn";
         	stmt1 = stmt1.replaceAll("f.Dno","");
         	stmt1 = stmt1.replaceAll(",C","C");
-        	stmt1 = stmt1 + " and e.Dno = Dnumber ";
+        	stmt1 = stmt1 + " and f.Dno = Dnumber ";
         	System.out.println(stmt1);
         	//System.out.println(select);
         	//System.out.println(stmt1);
@@ -234,20 +289,116 @@ public class db_ui {
             JButton choose_button = new JButton("선택");
             this.add(choose_button);
             
+            JPanel panel1 = new JPanel();
             JPanel panel = new JPanel();
             String[] header = new String[0];  // 헤더 = columm 설정
+            String[] show_table_header = new String[0];
             String [][] contents = new String[0][]; // content는 안에 들어갈 내용물들
             DefaultTableModel model = new DefaultTableModel(contents,header); // 테이블모델 선언
+            DefaultTableModel show_table_model = new DefaultTableModel(contents,show_table_header);
             JTable table =  new JTable(model); // 테이블을 만들고 그 안에 바로 앞에 선언한 model을 넣어줌
+            JTable show_table =  new JTable(show_table_model);
             JScrollPane jscp1 = new JScrollPane(table);
-            jscp1.setPreferredSize (new Dimension(1380,400));
-            this.add(jscp1);
+            JScrollPane jscp2 = new JScrollPane(show_table);
 
-            this.add(panel, BorderLayout.WEST);
-            JTextArea txt  = new JTextArea(10,80);
-            this.add(txt);
             
+            jscp1.setPreferredSize (new Dimension(1380,200));
+            jscp2.setPreferredSize (new Dimension(1380,200));
+            jscp1.setBorder(BorderFactory.createTitledBorder("Search"));
+            this.add(jscp1);
+            
+            String show_table_radio[] = show_table_msg.split(" ");
+            JRadioButton radio[] = new JRadioButton[show_table_radio.length];
+            ButtonGroup group = new ButtonGroup();
+            for(int i=0; i<show_table_radio.length; i++) {
+            	radio[i] = new JRadioButton(show_table_radio[i]);
+            	group.add(radio[i]);
+            	panel.add(radio[i]);
+            }
+            
+            panel.setPreferredSize (new Dimension(1000,30));
+            this.add(panel); // 라디오 버튼
+
+            JPanel panel2 = new JPanel();
+            
+            panel2.add(jscp2,BorderLayout.SOUTH);
+            panel2.setBorder(BorderFactory.createTitledBorder("Tables"));
+            this.add(panel2); // tables
+            
+            JTextArea txt  = new JTextArea(10,40);
+            panel1.setBorder(BorderFactory.createTitledBorder("상태창"));
+            panel1.add(txt,BorderLayout.SOUTH);
+            this.add(panel1); // 입력창
+            
+            JPanel empty_space = new JPanel();
+            empty_space.setBorder(BorderFactory.createTitledBorder("삭제"));
+            empty_space.setPreferredSize (new Dimension(460,210));
+            empty_space.setBackground(Color.YELLOW);
+            this.add(empty_space);
+            
+            JPanel empty_space2 = new JPanel();
+            empty_space2.setBorder(BorderFactory.createTitledBorder("삽입"));
+            empty_space2.setPreferredSize (new Dimension(460,210));
+            empty_space2.setBackground(Color.GREEN);
+            this.add(empty_space2);
             // 화면구성 
+            
+            ActionListener show_table_contents = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					table_header = "";
+					table_contents = "";
+					choose_button_get = e.getActionCommand();
+	            	lock = 2;
+	            	try {
+						DB_Access();
+					} catch (SQLException | IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+	            	lock = 1;
+	            	
+	            	// show_table_header에는 값?
+	            	// contetns에는 내용 
+	            	state_msg = "you choose " + choose_button_get;
+	            	txt.setText(state_msg);
+	            	
+	            	String table_header_split[] = table_header.split(" ");
+	            	String table_content_split[] = table_contents.split("\n");
+	            	String[][] table_contents_split = new String[table_content_split.length][];
+	            	for(int i=0; i<table_content_split.length; i++) {
+	            		table_contents_split[i] = table_content_split[i].split("  ");
+	            	}
+	            	show_table.setModel(new DefaultTableModel(table_contents_split,table_header_split));
+	            	show_table.repaint();
+				}
+            };
+            
+            for(int i=0; i<show_table_radio.length; i++) {
+            	radio[i].addActionListener(show_table_contents);
+            }
+            
+            ActionListener select_person = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// TODO Auto-generated method stub
+					state_msg = "";
+					state_msg = "you press 선택 button";
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					txt.setText(state_msg);
+				}
+            };
+            
+            choose_button.addActionListener(select_person);
             
             ActionListener summit_listener = new ActionListener() {
 				@Override
@@ -339,11 +490,10 @@ public class db_ui {
 						//array3 는 전처리된 데이터
 						
 						table.setModel(new DefaultTableModel(array3,array));
-						
+						table.repaint();
 						// Jtable에 체크박스 달기... 
 						// ex.. https://i.stack.imgur.com/SmVEG.jpg
 
-						table.repaint();
 					} catch (SQLException | IOException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -365,11 +515,13 @@ public class db_ui {
             };
             summit_button.addActionListener(summit_listener);
             combo1.addActionListener(combo1_listener);
+            
+            
             setSize(1500, 800);
             setVisible(true);
         }
     }
-    
+
     public static void main(String[] args) throws SQLException, IOException{
         new setGUI();
     }
