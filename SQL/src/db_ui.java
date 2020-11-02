@@ -11,8 +11,13 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+
 
 import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Random;
 
 
 
@@ -32,8 +37,45 @@ public class db_ui {
 	static String table_contents = "";
 	static String show_table_msg = "";
 	static String choose_button_get = "";
+	static int how_many_employee = 0;
+	static int how_many_col = 0;
+	static int select_all = 0;
+	static String insert_string = "";
+	static int seleted_table_button = -1;
+	static JTextArea txt  = new JTextArea(13,40);
+	static String selected_employee = "";
+	static String[][] array3;
+	static String throwed_ssn ;
+	public static int set_table_button(int k) {
+		seleted_table_button = k;
+		return 0;
+	}
 	
+	public  boolean  validationDate(String checkDate){
+	   try{
+	         SimpleDateFormat  dateFormat = new  SimpleDateFormat("yyyy-MM-dd");
 
+	         dateFormat.setLenient(false);
+	         dateFormat.parse(checkDate);
+	         return  true;
+
+	       }catch (ParseException  e){
+	         return  false;
+	       }
+	}
+	
+	public void show_message() {
+		JOptionPane.showMessageDialog(null, "Name이나 SSN이 체크되어야 합니다");
+	}
+	
+	public void select_name_from_employee_where_ssn_is(String throw_ssn) throws SQLException, IOException {
+		throwed_ssn = throw_ssn;
+		lock = 7;
+		DB_Access();
+		lock = 1;
+	}
+	
+	
 	public static String DB_Access() throws SQLException, IOException {
 		Connection conn = null;
 		state_msg = "";
@@ -53,6 +95,22 @@ public class db_ui {
         } catch (ClassNotFoundException e) {
             System.err.println("드라이버를 로드할 수 없습니다.");
             e.printStackTrace();
+        }
+        
+        if(lock == 7) {
+        	String stmt1="select Fname, Minit, Lname from department where ssn=" + throwed_ssn;
+        	System.out.println(stmt1);
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.clearParameters();
+        	ResultSet r=p.executeQuery();
+        	//System.out.println(r.getString(1));
+        	while(r.next()){
+            	String result = "";
+            	for(int i=0; i<count_select+1; i++) 
+            	result += r.getString(i+1) + " ";
+            	db_result += result;
+            	//System.out.println(result);
+            }
         }
         
         // lock이 0이면 이것을 실행
@@ -79,6 +137,17 @@ public class db_ui {
             	show_table_msg += rs.getString(1) + " ";
             }   	
         	return db_result;
+        }
+        
+        if(lock == 3) { // insert
+        	String[] slice_insert_string = insert_string.split("  ");
+        	String stmt1 = "insert into employee values('"+slice_insert_string[0]+"','"+slice_insert_string[1]+"','"+ slice_insert_string[2]+"','"+ slice_insert_string[3]+"','" + slice_insert_string[4]+"','"+ slice_insert_string[5]+"','"+slice_insert_string[6]+"','"+ slice_insert_string[7]+"','"+ slice_insert_string[8] +"','"+slice_insert_string[9]+"')";
+        	System.out.println(stmt1);
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.executeUpdate(stmt1);
+
+        	return "";
+        	
         }
         
         if(lock == 2) {
@@ -191,8 +260,8 @@ public class db_ui {
         	}
         }
         
-        System.out.println(stmt1);
-        System.out.println("\n\n\n");
+        //System.out.println(stmt1);
+        System.out.println("\n");
         
         // select f.ssn ,e.Fname, e.Minit, e.Lname from employee e, employee f where f.Super_ssn = e.Ssn;
        
@@ -219,12 +288,31 @@ public class db_ui {
 
         
         while(r.next()){
+        	how_many_employee += 1;
         	String result = "";
         	for(int i=0; i<count_select+1; i++) 
         	result += r.getString(i+1) + "  ";
         	db_result += result+"\n";
         	//System.out.println(result);
         }
+        //System.out.println(db_result+ "\n\n");
+        
+        if(select_all == 1 && (select_msg.equals("전체") || select_msg2.equals("전체"))) {
+        	stmt1 = "select Fname,Minit,Lname,ssn,Bdate,Address,Sex,Salary,Super_ssn,Dname from employee, department where super_ssn IS NULL and Dno=Dnumber";
+        	p = conn.prepareStatement(stmt1);
+        	p.clearParameters();
+        	r=p.executeQuery();
+        	while(r.next()){
+            	String result = "";
+            	for(int i=0; i<count_select+1; i++) 
+                result += r.getString(i+1) + "  ";
+            	db_result += result+"\n";
+            	how_many_employee +=1;
+            	//System.out.println(result);
+            }
+    	} 
+        //System.out.println(db_result);
+ 
         
         // 해제
         try {
@@ -255,7 +343,7 @@ public class db_ui {
             String depart[] = department_list.split(" ");
             
             JComboBox<String> combo1 = new JComboBox<String>(total_depart);
-            add( combo1, BorderLayout.NORTH);
+            this.add(combo1, BorderLayout.NORTH);
             
             JComboBox<String> combo2 = new JComboBox<String>(depart);
             // department_list에는 research같은 값을 넣은적이 없지만, db에서 가져온 dname을 넣어준것
@@ -264,7 +352,7 @@ public class db_ui {
             // db의 모든 depart를 불러와서 
             // for  combo2.additem(DB_all_depart[i]); 같이 넣어 줄 수 있을것 같네요
             
-            add(combo2, BorderLayout.NORTH);
+            this.add(combo2, BorderLayout.NORTH);
             combo2.setEnabled(false);
             JCheckBox chk1 = new JCheckBox("name",false);
             JCheckBox chk2 = new JCheckBox("ssn",false);
@@ -286,8 +374,7 @@ public class db_ui {
             JButton summit_button = new JButton("검색");
             this.add(summit_button);
             // 기본적인 check box 넣기, 검색버튼
-            JButton choose_button = new JButton("선택");
-            this.add(choose_button);
+            
             
             JPanel panel1 = new JPanel();
             JPanel panel = new JPanel();
@@ -300,7 +387,6 @@ public class db_ui {
             JTable show_table =  new JTable(show_table_model);
             JScrollPane jscp1 = new JScrollPane(table);
             JScrollPane jscp2 = new JScrollPane(show_table);
-
             
             jscp1.setPreferredSize (new Dimension(1380,200));
             jscp2.setPreferredSize (new Dimension(1380,200));
@@ -325,23 +411,168 @@ public class db_ui {
             panel2.setBorder(BorderFactory.createTitledBorder("Tables"));
             this.add(panel2); // tables
             
-            JTextArea txt  = new JTextArea(10,40);
+            
             panel1.setBorder(BorderFactory.createTitledBorder("상태창"));
             panel1.add(txt,BorderLayout.SOUTH);
             this.add(panel1); // 입력창
             
             JPanel empty_space = new JPanel();
             empty_space.setBorder(BorderFactory.createTitledBorder("삭제"));
-            empty_space.setPreferredSize (new Dimension(460,210));
+            empty_space.setPreferredSize (new Dimension(460,260));
             empty_space.setBackground(Color.YELLOW);
             this.add(empty_space);
             
             JPanel empty_space2 = new JPanel();
             empty_space2.setBorder(BorderFactory.createTitledBorder("삽입"));
-            empty_space2.setPreferredSize (new Dimension(460,210));
+            empty_space2.setPreferredSize (new Dimension(460,260));
             empty_space2.setBackground(Color.GREEN);
+            
+            JPanel new_insert = new JPanel();
+            
+            JTextField textPeriod1 = new JTextField(10);
+            JLabel labelPeriod1 = new JLabel("Fname: ");
+            new_insert.add(labelPeriod1);
+            new_insert.add(textPeriod1);
+            
+            JTextField textPeriod2 = new JTextField(11);
+            JLabel labelPeriod2 = new JLabel("Minit: ");
+            new_insert.add(labelPeriod2);
+            new_insert.add(textPeriod2);
+            
+            JTextField textPeriod3 = new JTextField(10);
+            JLabel labelPeriod3 = new JLabel("Lname: ");
+            new_insert.add(labelPeriod3);
+            new_insert.add(textPeriod3);
+            
+            JTextField textPeriod4 = new JTextField(12);
+            JLabel labelPeriod4 = new JLabel("ssn: ");
+            new_insert.add(labelPeriod4);
+            new_insert.add(textPeriod4);
+            
+            JTextField textPeriod5 = new JTextField(11);
+            JLabel labelPeriod5 = new JLabel("Bdate: ");
+            new_insert.add(labelPeriod5);
+            new_insert.add(textPeriod5);
+            
+            JPanel new_insert2 = new JPanel();
+            
+            JTextField textPeriod6 = new JTextField(9);
+            JLabel labelPeriod6 = new JLabel("Address: ");
+            new_insert2.add(labelPeriod6);
+            new_insert2.add(textPeriod6);
+            
+            JTextField textPeriod7 = new JTextField(12);
+            JLabel labelPeriod7 = new JLabel("sex: ");
+            new_insert2.add(labelPeriod7);
+            new_insert2.add(textPeriod7);
+            
+            JTextField textPeriod8 = new JTextField(9);
+            JLabel labelPeriod8 = new JLabel("Salary: ");
+            new_insert2.add(labelPeriod8);
+            new_insert2.add(textPeriod8);
+            
+            JTextField textPeriod9 = new JTextField(8);
+            JLabel labelPeriod9 = new JLabel("Super_ssn: ");
+            new_insert2.add(labelPeriod9);
+            new_insert2.add(textPeriod9);
+            
+            JTextField textPeriod10 = new JTextField(11);
+            JLabel labelPeriod10 = new JLabel("Dno: ");
+            new_insert2.add(labelPeriod10);
+            new_insert2.add(textPeriod10);
+            
+            new_insert.setPreferredSize (new Dimension(180,150));
+            new_insert2.setPreferredSize (new Dimension(180,150));
+            JButton insert_button = new JButton("INSERT EMPLOYEE");
+
+            empty_space2.add(new_insert);
+            empty_space2.add(new_insert2);
+            empty_space2.add(insert_button);
             this.add(empty_space2);
             // 화면구성 
+            
+            ActionListener insert_employee = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// TODO Auto-generated method stub
+					state_msg = "insert";
+					txt.setText(state_msg);
+					String plz_fill = "";
+					if(textPeriod1.getText().equals("")) {
+						plz_fill += "Fname을 채우세요\n";
+					} if(textPeriod2.getText().equals("")) {
+						plz_fill += "Minit을 채우세요\n";
+					} if(textPeriod3.getText().equals("")) {
+						plz_fill += "Lname을 채우세요\n";
+					} if(textPeriod4.getText().equals("")) {
+						plz_fill += "ssn을 채우세요\n";
+					} if(textPeriod5.getText().equals("")) {
+						plz_fill += "Bdate를 채우세요\n";
+					} if(textPeriod6.getText().equals("")) {
+						plz_fill += "Address를 채우세요\n";
+					} if(textPeriod7.getText().equals("")) {
+						plz_fill += "sex를 채우세요\n";
+					} if(textPeriod8.getText().equals("")) {
+						plz_fill += "Salary를 채우세요\n";
+					} if(textPeriod9.getText().equals("")) {
+						plz_fill += "Super_ssm을 채우세요\n";
+					} if(textPeriod10.getText().equals("")) {
+						plz_fill += "Dno을 채우세요\n";
+					}
+					int error_check = 0;
+					if(textPeriod2.getText().length() != 1) {
+						JOptionPane.showMessageDialog(null, "Minit은 한글자여야합니다");
+						error_check = 1;
+					}
+					if(textPeriod2.getText().length() > 9) {
+						JOptionPane.showMessageDialog(null, "Minit은 한글자여야합니다");
+						error_check = 1;
+					}
+					if(textPeriod7.getText().length() != 1) {
+						JOptionPane.showMessageDialog(null, "Sex는 한글자여야합니다");
+						error_check = 1;
+					}
+					
+					try{
+				         SimpleDateFormat  dateFormat = new  SimpleDateFormat("yyyy-MM-dd");
+				         dateFormat.setLenient(false);
+				         dateFormat.parse(textPeriod5.getText());
+				         
+				       }catch (ParseException e1){
+				    	   JOptionPane.showMessageDialog(null, "올바르지 않은 날짜형식");
+				    	   error_check =1;
+				    }
+					
+					if(!plz_fill.equals("")) {
+						JOptionPane.showMessageDialog(null, plz_fill);
+					} else if(error_check == 0) {
+						System.out.println("success");
+						insert_string = textPeriod1.getText() + "  " + 
+								textPeriod2.getText() + "  " + 
+								textPeriod3.getText() + "  " + 
+								textPeriod4.getText() + "  " + 
+								textPeriod5.getText() + "  " +
+								textPeriod6.getText() + "  " +
+								textPeriod7.getText() + "  " +
+								textPeriod8.getText() + "  " +
+								textPeriod9.getText() + "  " +
+								textPeriod10.getText();
+						lock = 3;
+						
+						try {
+							DB_Access();
+						} catch (SQLException | IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						lock = 1;
+						
+					}
+				}
+            	
+            };
+            insert_button.addActionListener(insert_employee);
+            
             
             ActionListener show_table_contents = new ActionListener() {
 				@Override
@@ -385,20 +616,13 @@ public class db_ui {
 					state_msg = "";
 					state_msg = "you press 선택 button";
 					
-					
-					
-					
-					
-					
-					
-					
-					
-					
+
+					// 선택기능
+
 					txt.setText(state_msg);
 				}
             };
-            
-            choose_button.addActionListener(select_person);
+
             
             ActionListener summit_listener = new ActionListener() {
 				@Override
@@ -412,6 +636,9 @@ public class db_ui {
 					select_msg2 = "";
 					count_select = 0;
 					select_depart = "";
+					how_many_employee = 0;
+					select_all = 0;
+					seleted_table_button = -1;
 					if(combo1.getSelectedItem().toString() == "전체") {
 		            	combo2.setEnabled(false);
 		            } else {
@@ -448,6 +675,7 @@ public class db_ui {
 						select_msg2 = "";
 					} else if(select_msg.equals("부서별")) {
 						select_msg = "";
+						
 					}
 					msg= msg.replace(" ", ",");	
 					msg = msg.substring(0, msg.length() - 1);
@@ -455,9 +683,9 @@ public class db_ui {
 						msg = msg.substring(1, msg.length());
 					}
 					System.out.println("select -" + msg);
-					state_msg += "select -" + msg +"\n";
+					//state_msg += "select -" + msg +"\n";
 					System.out.println("from -" + " " + select_msg + select_msg2);
-					state_msg += "from -" + " " + select_msg + select_msg2 + "\n";
+					//state_msg += "from -" + " " + select_msg + select_msg2 + "\n";
 					txt.setText(state_msg);
 					
 					select_depart = select_msg + select_msg2;
@@ -466,6 +694,7 @@ public class db_ui {
 					
 					if(msg.equals("")) {
 						msg = "Fname,Minit,Lname,ssn,Bdate,Address,Sex,Salary,Super_ssn,Dno";
+						select_all =1;
 					}
 					
 					try {
@@ -476,23 +705,41 @@ public class db_ui {
 						//textbox.append(db_result);
 						msg = msg.replaceAll("Super_ssn", "Supervisor");
 						msg = msg.replaceAll("Dno", "Department");
+						msg = msg + ", ";
 						String array[] = msg.split(",");
 						String array2[] = db_result.split("\n");
 						
 						for(int i=0; i<array2.length; i++) {
 							//System.out.println(array2[i]);
 						}
-						String[][] array3 = new String[array2.length][];
+						array3 = new String[array2.length][];
 						for(int i=0; i<array2.length; i++) {
 							array3[i] = array2[i].split("  ");
 						}
 						//array는 전처리리된 헤더
 						//array3 는 전처리된 데이터
-						
-						table.setModel(new DefaultTableModel(array3,array));
+						DefaultTableModel new_model = new DefaultTableModel(array3,array);
+			        
+						table.setModel(new_model);
+						TableColumn column = table.getColumnModel().getColumn(array.length-1);
+
+						column.setMinWidth(20);
+			            column.setMaxWidth(20);
+			            column.setPreferredWidth(20);
+			            
+			            //System.out.println(how_many_employee);
+			            state_msg = "검색된 직원수 : " + how_many_employee;
+			            txt.setText(state_msg);
+			            
+						//table.getColumn(" ").setPreferredWidth(150);
+						DefaultTableCellRenderer renderer = new MyDefaultTableCellRenderer();
+						table.getColumn(" ").setCellRenderer(renderer);
+
+						JCheckBox box = new JCheckBox();
+						table.getColumn(" ").setCellEditor(new DefaultCellEditor(box));
 						table.repaint();
-						// Jtable에 체크박스 달기... 
-						// ex.. https://i.stack.imgur.com/SmVEG.jpg
+						
+						
 
 					} catch (SQLException | IOException e1) {
 						// TODO Auto-generated catch block
@@ -500,6 +747,7 @@ public class db_ui {
 					}
 				}
             };
+            
             
             
             ActionListener combo1_listener = new ActionListener() {
@@ -517,7 +765,7 @@ public class db_ui {
             combo1.addActionListener(combo1_listener);
             
             
-            setSize(1500, 800);
+            setSize(1500, 900);
             setVisible(true);
         }
     }
@@ -525,5 +773,32 @@ public class db_ui {
     public static void main(String[] args) throws SQLException, IOException{
         new setGUI();
     }
-
 }
+
+
+
+
+
+
+
+
+
+// 수정해야될것 
+
+/*
+ * 
+ * 
+ * 
+ * 1.delete 구현 / salary 수정구현
+ * 2.직원선택 최적화
+ * 
+ * headqarters 안보이는 현상 수정
+ * 
+ * 
+ */
+
+
+
+
+
+
