@@ -29,28 +29,26 @@ public class MyDefaultTableCellRenderer extends DefaultTableCellRenderer {
 		if(isSelected == true) {
 			System.out.println(test2.msg);
 			((AbstractButton) comp).setSelected(true);
-			if(test2.msg.contains("Fname") || test2.msg.contains("ssn")) {
+			if(test2.msg.contains("Fname") && test2.msg.contains("ssn")) {
+				test2.txt.setText("선택한 직원 : " + test2.array3[row][0] + " " + test2.array3[row][1] + " " + test2.array3[row][2]);
+				test2.selected_employee = test2.array3[row][0] + " " + test2.array3[row][1] + " " + test2.array3[row][2];
+				test2.throwed_ssn = test2.array3[row][3];
 				
-				((AbstractButton) comp).setSelected(false);
-				test2.txt.setText("Name이나 SSN이 체크되어야 합니다");
-				// ## 이부분이 문제인데...
-				
-				
-				isSelected = false;
-				//row를 어떻게 뺄까?
-				select_row_table = row;
 				try {
-					select_row_table_button();
+					test2.lock = 11;
+					String DB_get_salary = test2.DB_Access();
+					test2.lock = 1;
+					test2.get_salary.setText(DB_get_salary);
 				} catch (SQLException | IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				
+				//test2.get_salary.setText = "";
 			} else {
 				((AbstractButton) comp).setSelected(false);
-				test2.txt.setText("Name이나 SSN이 체크되어야 합니다");
-				// ## 이부분이 문제인데...
-
-				isSelected = false;
+				//System.out.println("직원 선택을 하려면 Name과 SSN을 체크해주세요");
+				test2.txt.setText("직원 선택을 하려면 Name과 SSN을 체크해주세요");
 			}
 		}
 		return comp;
@@ -69,7 +67,7 @@ public class MyDefaultTableCellRenderer extends DefaultTableCellRenderer {
 			String throw_ssn = test1.array3[test1.seleted_table_button][3];
 		} else {
 			String throw_ssn = test1.array3[test1.seleted_table_button][0];
-			test1.select_name_from_employee_where_ssn_is(throw_ssn);
+			
 		}
 		test1.txt.setText("직원 선택 : " + column_employee);
 

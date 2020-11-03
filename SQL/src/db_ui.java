@@ -12,14 +12,12 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
-
-
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Random;
-
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class db_ui {
@@ -43,9 +41,13 @@ public class db_ui {
 	static String insert_string = "";
 	static int seleted_table_button = -1;
 	static JTextArea txt  = new JTextArea(13,40);
-	static String selected_employee = "";
+	static String selected_employee;
 	static String[][] array3;
 	static String throwed_ssn ;
+	static JTextField get_salary = new JTextField(10);
+	static JTextField set_salary;
+	static String change_value;
+	
 	public static int set_table_button(int k) {
 		seleted_table_button = k;
 		return 0;
@@ -63,13 +65,9 @@ public class db_ui {
 	         return  false;
 	       }
 	}
+
 	
-	public void show_message() {
-		JOptionPane.showMessageDialog(null, "Name이나 SSN이 체크되어야 합니다");
-	}
-	
-	public void select_name_from_employee_where_ssn_is(String throw_ssn) throws SQLException, IOException {
-		throwed_ssn = throw_ssn;
+	public static void delete_employee_where_ssn () throws SQLException, IOException {
 		lock = 7;
 		DB_Access();
 		lock = 1;
@@ -98,19 +96,32 @@ public class db_ui {
         }
         
         if(lock == 7) {
-        	String stmt1="select Fname, Minit, Lname from department where ssn=" + throwed_ssn;
-        	System.out.println(stmt1);
+        	String stmt1="delete from employee where ssn = " + throwed_ssn;
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.executeLargeUpdate();
+        	return "";
+        }
+        
+        if(lock == 20) {
+        	String stmt1 = "update employee set salary= " + change_value + " where ssn = " + throwed_ssn;
+        	PreparedStatement p=conn.prepareStatement(stmt1);
+        	p.executeLargeUpdate();
+        	return "";
+        }
+        
+        if(lock == 11) {
+        	String stmt1="select salary from employee where ssn = " + throwed_ssn;
         	PreparedStatement p=conn.prepareStatement(stmt1);
         	p.clearParameters();
         	ResultSet r=p.executeQuery();
-        	//System.out.println(r.getString(1));
+        	String result = "";
         	while(r.next()){
-            	String result = "";
-            	for(int i=0; i<count_select+1; i++) 
-            	result += r.getString(i+1) + " ";
+            	result = "";
+            	result += r.getString(1) + " ";
             	db_result += result;
             	//System.out.println(result);
             }
+        	return result;
         }
         
         // lock이 0이면 이것을 실행
@@ -211,11 +222,17 @@ public class db_ui {
         String stmt1="";
         if(dno == 0 && super_ssn==0) {
         	stmt1="select "+ select + "from "+ from;  //+" where "+"ssn ="+"?";
+        	if(!select_depart.equals("전체")) {
+            	stmt1 = stmt1 + ",department where dno = dnumber and dname = " +  '"' + select_depart + '"';
+            }
         }
         if(dno == 1 && super_ssn==0) {
         	select = select.replaceAll("Dno", "");
         	stmt1="select "+ select + "Dname from department,employee where Dnumber = Dno";
         	msg = msg.replaceAll("Dno", "Dname");
+        	if(!select_depart.equals("전체")) {
+            	stmt1 = stmt1 + " and dname = " +  '"' + select_depart + '"';
+            }
         }
         if(dno == 0 && super_ssn==1) {
         	select = select.replaceAll(",Super_ssn", "");
@@ -224,8 +241,13 @@ public class db_ui {
         	select = select.replaceAll(",", ",f.");
         	//System.out.print("find - ");
         	//System.out.println(select);
-        	stmt1 = "SELECT "+select+" ,CONCAT_WS(' ', e.Fname, e.Minit, e.Lname) from employee e,employee f where e.Ssn = f.super_ssn";
+        	stmt1 = "SELECT "+select+" ,CONCAT_WS(' ', e.Fname, e.Minit, e.Lname) from employee f LEFT JOIN employee e ON f.super_ssn = e.ssn";
         	stmt1 = stmt1.replaceAll("f.Super_ssn ,", "");
+        	//System.out.println(select);
+        	//System.out.println(stmt1);
+        	if(!select_depart.equals("전체")) {
+            	stmt1 = stmt1 + " LEFT JOIN department ON f.dno = Dnumber AND Dname= " +'"'+ select_depart+'"' + " where Dname IS NOT NULL ";
+            }
         }
         if(dno == 1 && super_ssn==1) {
         	// SELECT f.Fname, f.ssn, CONCAT_WS(' ', e.Fname, e.Minit, e.Lname) AS Supervisior, Dname FROM employee e,employee f, department where e.Ssn = f.super_ssn and e.Dno = Dnumber;
@@ -236,29 +258,20 @@ public class db_ui {
         	select = select.replaceAll("f.Super_ssn,","");
         	//System.out.print("find - ");
         	//System.out.println(select);
-        	stmt1 = "SELECT "+select+" ,CONCAT_WS(' ', e.Fname, e.Minit, e.Lname), Dname from employee e,employee f, department where e.Ssn = f.super_ssn";
+        	stmt1 = "SELECT "+select+" ,CONCAT_WS(' ', e.Fname, e.Minit, e.Lname), Dname from employee f LEFT JOIN employee e ON f.super_ssn = e.ssn LEFT JOIN department ON f.dno = dnumber";
         	stmt1 = stmt1.replaceAll("f.Dno","");
         	stmt1 = stmt1.replaceAll(",C","C");
         	stmt1 = stmt1 + " and f.Dno = Dnumber ";
-        	System.out.println(stmt1);
-        	//System.out.println(select);
         	//System.out.println(stmt1);
-        }
+        	//System.out.println(select);
+        	if(!select_depart.equals("전체")) {
+        		stmt1 = stmt1 + "where Dname= " +'"'+ select_depart+'"' + " AND Dname IS NOT NULL ";
+            }
         
-        if(!select_depart.equals("전체")) {
-        	if(!stmt1.contains("department")) {
-        		stmt1 = stmt1.replaceAll("from", "from department,");
-        	}
-        	if(!stmt1.contains("where")) {
-        		stmt1 = stmt1+ " where Dnumber = dno and Dname = " + '"' + select_depart + '"';
-        	} else {
-        		if(!stmt1.contains("f.")) {
-        			stmt1 = stmt1.replaceAll("where", " where Dnumber = dno and Dname = " + '"' + select_depart + '"' + " and");
-            	} else {
-            		stmt1 = stmt1.replaceAll("where", " where Dnumber = f.dno and Dname = " + '"' + select_depart + '"' + " and "  );
-            	}
-        	}
+        	System.out.println(stmt1);
+        	
         }
+        System.out.println(stmt1);
         
         //System.out.println(stmt1);
         System.out.println("\n");
@@ -296,21 +309,6 @@ public class db_ui {
         	//System.out.println(result);
         }
         //System.out.println(db_result+ "\n\n");
-        
-        if(select_all == 1 && (select_msg.equals("전체") || select_msg2.equals("전체"))) {
-        	stmt1 = "select Fname,Minit,Lname,ssn,Bdate,Address,Sex,Salary,Super_ssn,Dname from employee, department where super_ssn IS NULL and Dno=Dnumber";
-        	p = conn.prepareStatement(stmt1);
-        	p.clearParameters();
-        	r=p.executeQuery();
-        	while(r.next()){
-            	String result = "";
-            	for(int i=0; i<count_select+1; i++) 
-                result += r.getString(i+1) + "  ";
-            	db_result += result+"\n";
-            	how_many_employee +=1;
-            	//System.out.println(result);
-            }
-    	} 
         //System.out.println(db_result);
  
         
@@ -360,8 +358,8 @@ public class db_ui {
             JCheckBox chk4 = new JCheckBox("Address",false);
             JCheckBox chk5 = new JCheckBox("Sex",false);
             JCheckBox chk6 = new JCheckBox("Salary",false);
-            JCheckBox chk7 = new JCheckBox("super_ssn",false);
-            JCheckBox chk8 = new JCheckBox("Dno",false);
+            JCheckBox chk7 = new JCheckBox("Supervisor",false);
+            JCheckBox chk8 = new JCheckBox("Department",false);
             this.add(chk1);
             this.add(chk2);
             this.add(chk3);            
@@ -417,9 +415,27 @@ public class db_ui {
             this.add(panel1); // 입력창
             
             JPanel empty_space = new JPanel();
-            empty_space.setBorder(BorderFactory.createTitledBorder("삭제"));
+            empty_space.setBorder(BorderFactory.createTitledBorder("기능"));
             empty_space.setPreferredSize (new Dimension(460,260));
             empty_space.setBackground(Color.YELLOW);
+            
+            JButton delete_employee_button = new JButton("선택한 직원 삭제");
+            delete_employee_button.setPreferredSize (new Dimension(440,30));
+            empty_space.add(delete_employee_button);
+            
+            JButton edit_salary = new JButton("선택한 직원 급여수정");
+            edit_salary.setPreferredSize (new Dimension(440,30));
+            JLabel get_salary_label = new JLabel("현재 선택직원 급여: ");
+            JLabel set_salary_label = new JLabel("수정할 급여 ");
+            set_salary = new JTextField(10);
+            empty_space.add(edit_salary);
+            
+            empty_space.add(get_salary_label);
+            empty_space.add(get_salary);
+            empty_space.add(set_salary_label);
+            empty_space.add(set_salary);
+                
+            
             this.add(empty_space);
             
             JPanel empty_space2 = new JPanel();
@@ -491,10 +507,66 @@ public class db_ui {
             this.add(empty_space2);
             // 화면구성 
             
+            ActionListener event_edit_employee = new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					//System.out.println("edit");
+					String check_regex = "(?<=^| )\\d+(\\.\\d+)?(?=$| )";
+					change_value = set_salary.getText();
+					if(change_value.matches(check_regex)) {
+						if(change_value.contains(".")) {
+						} else {
+							change_value = change_value + ".00";
+						}
+						try {
+							lock = 20;
+							DB_Access();
+							lock = 1;
+						} catch (SQLException | IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						//System.out.println(throwed_ssn);
+						//System.out.println("correct");
+					} else {
+						//System.out.println("deny");
+						txt.setText("올바른 급여를 입력하세요.\n" + "문자나 '11.' 같은 형식은 허용되지않습니다");
+					}
+				}
+            	
+            };
+            
+            edit_salary.addActionListener(event_edit_employee);
+            
+            ActionListener delete_employee = new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					// TODO Auto-generated method stub
+					if(selected_employee == null || selected_employee == "") {
+						txt.setText("선택된 직원이 없습니다");
+					} else {
+						txt.setText(" Name: " + selected_employee  + " // SSN : " + throwed_ssn +" 삭제합니다");
+						try {
+							delete_employee_where_ssn();
+						} catch (SQLException | IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+
+						
+						//
+					}
+				}
+            };
+            
+            delete_employee_button.addActionListener(delete_employee);
+            
             ActionListener insert_employee = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					// TODO Auto-generated method stub
+					selected_employee = "";
 					state_msg = "insert";
 					txt.setText(state_msg);
 					String plz_fill = "";
@@ -577,6 +649,7 @@ public class db_ui {
             ActionListener show_table_contents = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
+					
 					table_header = "";
 					table_contents = "";
 					choose_button_get = e.getActionCommand();
@@ -629,6 +702,8 @@ public class db_ui {
 				public void actionPerformed(ActionEvent e) {
 					// TODO Auto-generated method stub
 					System.out.println("검색 ");
+					get_salary.setText("");
+					selected_employee = "";
 					state_msg = "";
 					state_msg += "검색" + "\n";
 					msg =" ";
@@ -682,9 +757,9 @@ public class db_ui {
 					if(msg.length()>0) {
 						msg = msg.substring(1, msg.length());
 					}
-					System.out.println("select -" + msg);
+					//System.out.println("select -" + msg);
 					//state_msg += "select -" + msg +"\n";
-					System.out.println("from -" + " " + select_msg + select_msg2);
+					//System.out.println("from -" + " " + select_msg + select_msg2);
 					//state_msg += "from -" + " " + select_msg + select_msg2 + "\n";
 					txt.setText(state_msg);
 					
