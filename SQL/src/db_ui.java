@@ -228,10 +228,10 @@ public class db_ui {
         }
         if(dno == 1 && super_ssn==0) {
         	select = select.replaceAll("Dno", "");
-        	stmt1="select "+ select + "Dname from department,employee where Dnumber = Dno";
+        	stmt1="select "+ select + "Dname from department LEFT JOIN employee ON Dnumber = Dno";
         	msg = msg.replaceAll("Dno", "Dname");
         	if(!select_depart.equals("ÀüÃ¼")) {
-            	stmt1 = stmt1 + " and dname = " +  '"' + select_depart + '"';
+            	stmt1 = stmt1 + " where dname = " +  '"' + select_depart + '"';
             }
         }
         if(dno == 0 && super_ssn==1) {
